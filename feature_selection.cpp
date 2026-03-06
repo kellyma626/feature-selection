@@ -23,6 +23,7 @@ vector<vector<double>> load_data(string filename) {
 
         data.push_back(row);
     }
+
     return data;
 }
 
@@ -75,7 +76,51 @@ double leave_one_out_validation(const vector<vector<double>>& data, const vector
         if (data[i][0] == nearest_label)
             correct++;
     }
+
     return (double)correct / n;
+}
+
+// Forward Selection Algorithm
+// starts with an empty feature set and adds the feature that gives the highest accuracy at each level
+void forward_selection(vector<vector<double>>& data, int num_features) {
+    vector<int> current_set;
+
+    cout << "\nBeginning search.\n";
+
+    // each level adds one feature
+    for (int level = 1; level <= num_features; level++) {
+        int feature_to_add = -1;
+        double best_accuracy_this_level = 0;
+
+        // try adding every unused feature
+        for (int feature = 1; feature <= num_features; feature++) {
+
+            if (find(current_set.begin(), current_set.end(), feature) == current_set.end()) {
+
+                vector<int> candidate = current_set;
+                candidate.push_back(feature);
+
+                double accuracy = leave_one_out_validation(data, candidate);
+
+                cout << "Using feature(s) ";
+                print_set(candidate);
+                cout << " accuracy is " << accuracy * 100 << "%\n";
+
+                // track best feature for this level
+                if (accuracy > best_accuracy_this_level) {
+                    best_accuracy_this_level = accuracy;
+                    feature_to_add = feature;
+                }
+            }
+        }
+
+        // add the best feature found
+        current_set.push_back(feature_to_add);
+
+        cout << "Feature set ";
+        print_set(current_set);
+        cout << " was best, accuracy is " << best_accuracy_this_level * 100 << "%\n";
+    }
 }
 
 // Driver Code
@@ -99,20 +144,19 @@ int main() {
          << num_instances
          << " instances.\n\n";
 
-    // create feature set containing all features
     vector<int> all_features;
 
     for (int i = 1; i <= num_features; i++)
         all_features.push_back(i);
 
-    cout << "Using feature set ";
-    print_set(all_features);
-    cout << " to evaluate nearest neighbor.\n";
-
     double accuracy = leave_one_out_validation(data, all_features);
 
-    cout << "Accuracy using leave-one-out evaluation is "
+    cout << "Running nearest neighbor with all "
+         << num_features
+         << " features, using \"leaving-one-out\" evaluation, I get an accuracy of "
          << accuracy * 100 << "%\n";
+
+    forward_selection(data, num_features);
 
     return 0;
 }
