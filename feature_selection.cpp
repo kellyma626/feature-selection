@@ -23,7 +23,6 @@ vector<vector<double>> load_data(string filename) {
 
         data.push_back(row);
     }
-
     return data;
 }
 
@@ -84,6 +83,8 @@ double leave_one_out_validation(const vector<vector<double>>& data, const vector
 // starts with an empty feature set and adds the feature that gives the highest accuracy at each level
 void forward_selection(vector<vector<double>>& data, int num_features) {
     vector<int> current_set;
+    vector<int> best_overall_set;
+    double best_overall_accuracy = 0;
 
     cout << "\nBeginning search.\n";
 
@@ -94,9 +95,7 @@ void forward_selection(vector<vector<double>>& data, int num_features) {
 
         // try adding every unused feature
         for (int feature = 1; feature <= num_features; feature++) {
-
             if (find(current_set.begin(), current_set.end(), feature) == current_set.end()) {
-
                 vector<int> candidate = current_set;
                 candidate.push_back(feature);
 
@@ -120,7 +119,73 @@ void forward_selection(vector<vector<double>>& data, int num_features) {
         cout << "Feature set ";
         print_set(current_set);
         cout << " was best, accuracy is " << best_accuracy_this_level * 100 << "%\n";
+
+        // track the best subset overall
+        if (best_accuracy_this_level > best_overall_accuracy) {
+            best_overall_accuracy = best_accuracy_this_level;
+            best_overall_set = current_set;
+        }
     }
+
+    cout << "\nFinished search!! The best feature subset is ";
+    print_set(best_overall_set);
+    cout << ", which has accuracy " << best_overall_accuracy * 100 << "%\n";
+}
+
+// Backward Elimination Algorithm
+// starts with all features and removes one feature at a time, choosing the removal that gives the best accuracy
+void backward_elimination(vector<vector<double>>& data, int num_features) {
+    vector<int> current_set;
+
+    // start with all features
+    for (int i = 1; i <= num_features; i++)
+        current_set.push_back(i);
+
+    vector<int> best_overall_set = current_set;
+    double best_overall_accuracy = leave_one_out_validation(data, current_set);
+
+    cout << "\nBeginning search.\n";
+
+    // continue until only one feature remains
+    while (current_set.size() > 1) {
+        int feature_to_remove = -1;
+        double best_accuracy_this_level = 0;
+
+        // try removing each feature
+        for (int feature : current_set) {
+            vector<int> candidate = current_set;
+
+            candidate.erase(remove(candidate.begin(), candidate.end(), feature), candidate.end());
+
+            double accuracy = leave_one_out_validation(data, candidate);
+
+            cout << "Using feature(s) ";
+            print_set(candidate);
+            cout << " accuracy is " << accuracy * 100 << "%\n";
+
+            if (accuracy > best_accuracy_this_level) {
+                best_accuracy_this_level = accuracy;
+                feature_to_remove = feature;
+            }
+        }
+
+        // remove the feature that produced the best accuracy
+        current_set.erase(remove(current_set.begin(), current_set.end(), feature_to_remove), current_set.end());
+
+        cout << "Feature set ";
+        print_set(current_set);
+        cout << " was best, accuracy is " << best_accuracy_this_level * 100 << "%\n";
+
+        // track best subset found overall
+        if (best_accuracy_this_level > best_overall_accuracy) {
+            best_overall_accuracy = best_accuracy_this_level;
+            best_overall_set = current_set;
+        }
+    }
+
+    cout << "\nFinished search!! The best feature subset is ";
+    print_set(best_overall_set);
+    cout << ", which has accuracy " << best_overall_accuracy * 100 << "%\n";
 }
 
 // Driver Code
@@ -132,6 +197,13 @@ int main() {
 
     cout << "Type the name of the file to test: ";
     cin >> filename;
+
+    cout << "Type the number of the algorithm you want to run.\n";
+    cout << "1) Forward Selection\n";
+    cout << "2) Backward Elimination\n";
+
+    int choice;
+    cin >> choice;
 
     vector<vector<double>> data = load_data(filename);
 
@@ -154,9 +226,12 @@ int main() {
     cout << "Running nearest neighbor with all "
          << num_features
          << " features, using \"leaving-one-out\" evaluation, I get an accuracy of "
-         << accuracy * 100 << "%\n";
+         << accuracy * 100 << "%\n\n";
 
-    forward_selection(data, num_features);
+    if (choice == 1)
+        forward_selection(data, num_features);
+    else
+        backward_elimination(data, num_features);
 
     return 0;
 }
